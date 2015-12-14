@@ -32,7 +32,7 @@ namespace CsProjArrange
             bool help = false;
             string inputFile = null;
             string outputFile = null;
-            IList<string> stickyElementNames = null;
+            IEnumerable<string> stickyElementNames = null;
             IEnumerable<string> sortAttributes = null;
             CsProjArrange.ArrangeOptions options = CsProjArrange.ArrangeOptions.All;
 

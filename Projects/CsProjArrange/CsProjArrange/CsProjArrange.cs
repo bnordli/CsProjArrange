@@ -27,6 +27,8 @@ namespace CsProjArrange
     /// </summary>
     public class CsProjArrange
     {
+        private const string DefaultMarker = "[Default]";
+
         private static readonly XmlNodeType[] includeXmlNodeTypes = 
             new XmlNodeType[] {
                 XmlNodeType.Comment,
@@ -37,6 +39,33 @@ namespace CsProjArrange
 
         private AttributeKeyComparer attributeKeyComparer;
         private NodeNameComparer nodeNameComparer;
+
+        private readonly string[] _defaultStickyElementNames =
+        {
+            // Primary
+            "Task",
+            "PropertyGroup",
+            "ItemGroup",
+            "Target",
+            // Secondary: PropertyGroup
+            "Configuration",
+            "Platform",
+            // Secondary: ItemGroup
+            "ProjectReference",
+            "Reference",
+            "Compile",
+            "Folder",
+            "Content",
+            "None",
+            // Secondary: Choose
+            "When",
+            "Otherwise",
+        };
+
+        private readonly string[] _defaultSortAttributes =
+        {
+            "Include",
+        };
 
         [Flags]
         public enum ArrangeOptions
@@ -59,40 +88,25 @@ namespace CsProjArrange
         /// <param name="stickyElementNames">A list of element names which should be stuck to the top when sorting the nodes. Defaults to the values: Import, Task, PropertyGroup, ItemGroup, Target, Configuration, Platform, ProjectReference, Reference, Compile, Folder, Content, None, When, and Otherwise.</param>
         /// <param name="sortAttributes">A list of attributes which should be used to sort the elements after they have been sorted by name. Defaults to the values: Include.</param>
         /// <param name="options">Options for the arrange.</param>
-        public void Arrange(string inputFile, string outputFile, IList<string> stickyElementNames, IEnumerable<string> sortAttributes, ArrangeOptions options)
+        public void Arrange(string inputFile, string outputFile, IEnumerable<string> stickyElementNames, IEnumerable<string> sortAttributes, ArrangeOptions options)
         {
+            var stickyElementNamesList = (stickyElementNames ?? new[] {DefaultMarker}).ToList();
+            var sortAttributesList = (sortAttributes ?? new[] {DefaultMarker}).ToList();
             // Default values.
             var encoding = new UTF8Encoding(false);
-            if (stickyElementNames == null) {
-                stickyElementNames = new string[] {
-                    // Primary
-                    "Task",
-                    "PropertyGroup",
-                    "ItemGroup",
-                    "Target",
-                    // Secondary: PropertyGroup
-                    "Configuration",
-                    "Platform",
-                    // Secondary: ItemGroup
-                    "ProjectReference",
-                    "Reference",
-                    "Compile",
-                    "Folder",
-                    "Content",
-                    "None",
-                    // Secondary: Choose
-                    "When",
-                    "Otherwise",
-                };
+            if (stickyElementNamesList.Contains(DefaultMarker))
+            {
+                stickyElementNamesList.Remove(DefaultMarker);
+                stickyElementNamesList.AddRange(_defaultStickyElementNames);
             }
-            if (sortAttributes == null) {
-                sortAttributes = new string[] {
-                    "Include",
-                };
+            if (sortAttributesList.Contains(DefaultMarker))
+            {
+                sortAttributesList.Remove(DefaultMarker);
+                sortAttributesList.AddRange(_defaultSortAttributes);
             }
             // Set up sorting comparers.
-            nodeNameComparer = new NodeNameComparer(stickyElementNames);
-            attributeKeyComparer = new AttributeKeyComparer(sortAttributes);
+            nodeNameComparer = new NodeNameComparer(stickyElementNamesList);
+            attributeKeyComparer = new AttributeKeyComparer(sortAttributesList);
             // Load the document.
             XDocument input;
             if (inputFile == null) {
@@ -139,7 +153,7 @@ namespace CsProjArrange
                         group.Elements()
                             .Select(x => x.Name)
                             .Distinct()
-                            .OrderBy(x => stickyElementNames.IndexOf(x.LocalName) == -1 ? int.MaxValue : stickyElementNames.IndexOf(x.LocalName))
+                            .OrderBy(x => stickyElementNamesList.IndexOf(x.LocalName) == -1 ? int.MaxValue : stickyElementNamesList.IndexOf(x.LocalName))
                             .ThenBy(x => x.LocalName)
                         ;
                     // Split into multiple item groups if there are multiple types included.
