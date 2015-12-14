@@ -34,13 +34,15 @@ namespace CsProjArrange
             string outputFile = null;
             IEnumerable<string> stickyElementNames = null;
             IEnumerable<string> sortAttributes = null;
+            IEnumerable<string> keepOrderElementNames = null;
             CsProjArrange.ArrangeOptions options = CsProjArrange.ArrangeOptions.All;
 
             OptionSet os = new OptionSet(){
                 { "?|help", "Display this usage message.", x => help = x != null },
                 { "i|input=", "Set the input file name. Standard input is the default.", x => inputFile = x },
                 { "o|output=", "Set the output file name. Standard output is the default.", x => outputFile = x },
-                { "s|sticky=", "Comma separated list of elements names which should be stuck to the top.", x => stickyElementNames = x.Split(',') },
+                { "s|sticky=", "Comma separated list of element names which should be stuck to the top.", x => stickyElementNames = x.Split(',') },
+                { "k|keeporder=", "Comma separated list of element names where children should not be sorted.", x => keepOrderElementNames = x.Split(',') },
                 { "a|attributes=", "Comma separated list of attributes to sort on.", x => sortAttributes = x.Split(',') },
                 { "p|options=", "Specify options", x => Enum.TryParse<CsProjArrange.ArrangeOptions>(x, out options) },
             };
@@ -64,7 +66,7 @@ namespace CsProjArrange
             }
 
             try {
-                new CsProjArrange().Arrange(inputFile, outputFile ?? inputFile, stickyElementNames, sortAttributes, options);
+                new CsProjArrange().Arrange(inputFile, outputFile ?? inputFile, stickyElementNames, keepOrderElementNames, sortAttributes, options);
             } catch (Exception e) {
                 Console.Error.WriteLine("Encountered an error: {0}", e.Message);
             }

@@ -62,6 +62,11 @@ namespace CsProjArrange
             "Otherwise",
         };
 
+        private readonly string[] _defaultKeepOrderElementNames =
+        {
+            "Target",
+        };
+
         private readonly string[] _defaultSortAttributes =
         {
             "Include",
@@ -86,11 +91,13 @@ namespace CsProjArrange
         /// <param name="inputFile">The file path for the input .csproj file. If none is specified, it will use the standard input.</param>
         /// <param name="outputFile">The file path for the output .csproj file. If none is specified, it will output to standard output.</param>
         /// <param name="stickyElementNames">A list of element names which should be stuck to the top when sorting the nodes. Defaults to the values: Import, Task, PropertyGroup, ItemGroup, Target, Configuration, Platform, ProjectReference, Reference, Compile, Folder, Content, None, When, and Otherwise.</param>
+        /// <param name="keepOrderElementNames">A list of element names where children should not be rearranged. Defaults to the values: Target.</param>
         /// <param name="sortAttributes">A list of attributes which should be used to sort the elements after they have been sorted by name. Defaults to the values: Include.</param>
         /// <param name="options">Options for the arrange.</param>
-        public void Arrange(string inputFile, string outputFile, IEnumerable<string> stickyElementNames, IEnumerable<string> sortAttributes, ArrangeOptions options)
+        public void Arrange(string inputFile, string outputFile, IEnumerable<string> stickyElementNames, IEnumerable<string> keepOrderElementNames, IEnumerable<string> sortAttributes, ArrangeOptions options)
         {
             var stickyElementNamesList = (stickyElementNames ?? new[] {DefaultMarker}).ToList();
+            var keepOrderElementNamesList = (keepOrderElementNames ?? new[] {DefaultMarker}).ToList();
             var sortAttributesList = (sortAttributes ?? new[] {DefaultMarker}).ToList();
             // Default values.
             var encoding = new UTF8Encoding(false);
@@ -98,6 +105,11 @@ namespace CsProjArrange
             {
                 stickyElementNamesList.Remove(DefaultMarker);
                 stickyElementNamesList.AddRange(_defaultStickyElementNames);
+            }
+            if (keepOrderElementNamesList.Contains(DefaultMarker))
+            {
+                keepOrderElementNamesList.Remove(DefaultMarker);
+                keepOrderElementNamesList.AddRange(_defaultKeepOrderElementNames);
             }
             if (sortAttributesList.Contains(DefaultMarker))
             {
@@ -138,10 +150,10 @@ namespace CsProjArrange
                         }
                     }
                     // Do the sorting.
-                    ArrangeElement(first);
+                    ArrangeElement(first, keepOrderElementNamesList);
                 } else {
                     foreach (var element in group) {
-                        ArrangeElement(element);
+                        ArrangeElement(element, keepOrderElementNamesList);
                     }
                 }
             }
@@ -195,17 +207,21 @@ namespace CsProjArrange
             }
         }
 
-        private void ArrangeElement(XElement element)
+        private void ArrangeElement(XElement element, IList<string> keepOrderElementNames)
         {
-            // Order by element name then by attributes.
-            element.ReplaceNodes(
-                element.Nodes()
-                    .OrderBy(x => x, nodeNameComparer)
-                    .ThenBy(x => x.NodeType == XmlNodeType.Element ? ((XElement)x).Attributes() : null, attributeKeyComparer)
-                );
+            if (!keepOrderElementNames.Contains(element.Name.LocalName))
+            {
+                // Order by element name then by attributes.
+                element.ReplaceNodes(
+                    element.Nodes()
+                        .OrderBy(x => x, nodeNameComparer)
+                        .ThenBy(x => x.NodeType == XmlNodeType.Element ? ((XElement) x).Attributes() : null,
+                            attributeKeyComparer)
+                    );
+            }
             // Arrange child elements.
             foreach (var child in element.Elements()) {
-                ArrangeElement(child);
+                ArrangeElement(child, keepOrderElementNames);
             }
         }
 
